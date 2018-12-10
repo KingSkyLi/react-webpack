@@ -8,12 +8,10 @@ const session = require('express-session')
 // 格式化请求数据
 const bodyParser = require('body-parser');
 
-
-
 const app = express();
-
-
+// 将请求格式修改成req.body（post请求传递参数）
 app.use(bodyParser.json());
+// 对应表单的请求格式
 app.use(bodyParser.urlencoded({ extended: false }));
 
 app.use(session({
@@ -24,16 +22,16 @@ app.use(session({
   secret: 'react cnode class'
 }))
 
-app.use(favicon(path.join(__dirname,'../favicon.ico')));
-app.use('/api/user',require('./handle-login'));
-app.use('/api',require('./proxy'));
+
+app.use(favicon(path.join(__dirname, '../favicon.ico')));
+// 使用不同的代理路由
+app.use('/api/user', require('./handle-login'));
+app.use('/api', require('./proxy'));
 app.listen('3333', function () {
   console.log('3333连接成功');
 });
 // 判断是否是开发环境
 const isDev = process.env.NODE_ENV === 'development';
-
-
 
 if (!isDev) {
   const entry = require('../dist/serverEntry.js').default;
@@ -48,9 +46,8 @@ if (!isDev) {
     res.send(tempalteString.replace('<!--app-->', appString));
     // res.send(appString);
   });
-
-}else{
-  const devStatic  = require('./util/dev-static.js');
+} else {
+  const devStatic = require('./util/dev-static.js');
   devStatic(app);
 }
 

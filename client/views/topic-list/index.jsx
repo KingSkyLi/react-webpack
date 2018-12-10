@@ -17,6 +17,16 @@ class TopicList extends React.Component {
 
   }
 
+  // 服务端渲染的异步操作
+  bootstrap() {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        this.props.appState.count = 3
+        resolve(true);
+      }, 1000)
+    })
+  }
+
   changeName(event) {
     this.props.appState.changeName(event.target.value);
   }

@@ -4,15 +4,22 @@ import ReactDom from 'react-dom';
 import { AppContainer } from 'react-hot-loader'; //eslint-disable-line
 import { BrowserRouter } from 'react-router-dom';
 import { Provider } from 'mobx-react';
-import appState from './store/app-state';
+import AppState from './store/app-state';
 import App from './views/App';
+
+const initialState = window.__INITIAL__STATE__||{};//eslint-disable-line
 // 封装DOM节点
 const root = document.getElementById('root');
 // 封装渲染函数
+// Provider 中注入 appState = {new AppState()} 与下列写法相同
 const render = (Component) => {
+  const stores = {
+    appState: new AppState(initialState.appState),
+  }
   ReactDom.render(
     <AppContainer>
-      <Provider appState={appState}>
+      {/* <Provider appState = {new AppState()> */}
+      <Provider {...stores}>
         <BrowserRouter>
           <Component />
         </BrowserRouter>

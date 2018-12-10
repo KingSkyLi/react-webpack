@@ -1,11 +1,13 @@
 import React from 'react';
-import { Route } from 'react-router-dom';
+import { Route, Redirect } from 'react-router-dom';
 import TopicList from '../views/topic-list/index';
 import TopicDetail from '../views/topic-detail/index';
 import TestApi from '../views/test/api.test';
 
 export default () => [
-  <Route path="/" component={TopicList} exact />,
-  <Route path="/detail" component={TopicDetail} />,
-  <Route path="/test" component={TestApi} />,
+  // 加一个Redirect
+  <Route path="/" render={() => <Redirect to="/list" />} key="first" exact />,
+  <Route path="/list" component={TopicList} key="list" />,
+  <Route path="/detail" component={TopicDetail} key="detail" />,
+  <Route path="/test" component={TestApi} key="test" />,
 ]

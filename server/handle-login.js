@@ -1,7 +1,6 @@
 const router = require('express').Router();
 const axios = require('axios');
-// cnode中有的请求需要表单的格式
-const querystring = require('query-string');
+
 
 const baseUrl = 'https://cnodejs.org/api/v1';
 

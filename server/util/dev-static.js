@@ -8,21 +8,38 @@ const serverConfig = require('../../config/webpack.config.server.js');
 const path = require('path');
 // 安装memory-fs,用于读取内存中的文件 (安装memory-fs)
 const MemoryFs = require('memory-fs');
+// 引入ejs
+const ejs = require('ejs');
+// 序列化Object
+const serialize = require('serialize-javascript');
 // 引入react-dom/server
 const ReactDomServer = require('react-dom/server');
 // 引入代理中间件
 const proxy = require('http-proxy-middleware');
 // 设置全局打包出的模块变量
-let serverBundle;
+let serverBundle, creatStoreMap;
 // 获取模板
 const getTemplate = () => {
   return new Promise((resolve, reject) => {
-    axios.get('http://localhost:8086/public/index.html').then(res => {
+    axios.get('http://localhost:8086/public/server.ejs').then(res => {
       resolve(res.data);
     }).catch(err => {
       reject(err);
     });
   })
+}
+// react-async-bootstrapper 解决服务端数据渲染
+const reactAsyncBootstrapper = require('react-async-bootstrapper');
+// 取store中的数据
+const getStoreState = (stores) => {
+  console.log('<-------------dev-static.js------------->')
+  console.log(Object.keys(stores.appState))
+  console.log('<-------------dev-static.js------------->')
+  return Object.keys(stores).reduce((result, storeName) => {
+    result[storeName] = stores[storeName].toJson();
+    return result;
+  }, {})
+  // return stores.appState.toJson();
 }
 // 手动打包，webpack的实例化
 const serverCompiler = webpack(serverConfig);
@@ -58,6 +75,7 @@ serverCompiler.watch({}, (err, stats) => {
   m._compile(bundle, 'serverEntry.js');
   // 输出最新的bundle文件
   serverBundle = m.exports.default;
+  creatStoreMap = m.exports.creatStoreMap;
 })
 
 // 输出一个方法,提供server.js中的调用入口
@@ -68,8 +86,26 @@ module.exports = function (app) {
   }));
   app.get('*', function (req, res) {
     getTemplate().then(template => {
-      const content = ReactDomServer.renderToString(serverBundle);
-      res.send(template.replace('<!--app-->', content))
+      const routerContext = {}
+      const stores = creatStoreMap();
+      const app = serverBundle(stores, routerContext, req.url);
+      reactAsyncBootstrapper(app).then(() => {
+        const content = ReactDomServer.renderToString(app);
+        const state = getStoreState(stores);
+        // 配合reacter-router,Redirect
+        if (routerContext.url) {
+          res.status(302).setHeader('Location', routerContext.url);
+          res.end();
+          return;
+        }
+        const html = ejs.render(template, {
+          appString: content,
+          initialState: serialize(state),
+        })
+        res.send(html)
+        //res.send(template.replace('<!--app-->', content))
+      })
+
     })
   })
 }
