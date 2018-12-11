@@ -16,6 +16,8 @@ const serialize = require('serialize-javascript');
 const ReactDomServer = require('react-dom/server');
 // 引入代理中间件
 const proxy = require('http-proxy-middleware');
+// 引入helmet
+const Helmet = require('react-helmet').default;
 // 设置全局打包出的模块变量
 let serverBundle, creatStoreMap;
 // 获取模板
@@ -45,8 +47,21 @@ const getStoreState = (stores) => {
 const serverCompiler = webpack(serverConfig);
 // 实例化内存读取模块
 const mfs = new MemoryFs;
-// 借用module对象的构造函数
-const Module = module.constructor;
+// // 借用module对象的构造函数
+// const Module = module.constructor;
+const NativeModule = require('module');
+const vm = require('vm');
+const getModuleFromString = (bundle, filename) => {
+  const m = { exports: {} };
+  const wrapper = NativeModule.wrap(bundle); // module.wrap，执行后返回的代码 ·function(exports,require,module,__filename,__dirname){...bundle code}·
+  const script = new vm.Script(wrapper, {
+    filename: filename,
+    displayErrors: true,
+  })
+  const result = script.runInThisContext();
+  result.call(m.exports, m.exports, require, m);
+  return m;
+}
 // webpack实例化的输出文件模式 写入内存
 serverCompiler.outputFileSystem = mfs;
 // 观察每次文件修改后变化
@@ -69,10 +84,13 @@ serverCompiler.watch({}, (err, stats) => {
   );
   // 内存中读取文件，并以utf-8的形式读取
   const bundle = mfs.readFileSync(bundlePath, 'utf-8');
+
   // 利用module的构造函数创建module
-  const m = new Module();
-  // 将打包出的js文件，用module解析
-  m._compile(bundle, 'serverEntry.js');
+  // const m = new Module();
+  // // 将打包出的js文件，用module解析
+  // m._compile(bundle, 'serverEntry.js');
+  const m = getModuleFromString(bundle,'server-entry.js');
+
   // 输出最新的bundle文件
   serverBundle = m.exports.default;
   creatStoreMap = m.exports.creatStoreMap;
@@ -98,9 +116,16 @@ module.exports = function (app) {
           res.end();
           return;
         }
+        const helmet = Helmet.rewind();
+        console.log('helmet.link.toString(),')
+        console.log(helmet.meta.toString())
         const html = ejs.render(template, {
           appString: content,
           initialState: serialize(state),
+          meta:helmet.meta.toString(),
+          title:helmet.title.toString(),
+          style:helmet.style.toString(),
+          link:helmet.link.toString(),
         })
         res.send(html)
         //res.send(template.replace('<!--app-->', content))

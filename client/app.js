@@ -7,6 +7,7 @@ import { Provider } from 'mobx-react';
 import AppState from './store/app-state';
 import App from './views/App';
 
+// 接收来之模板的全局变量
 const initialState = window.__INITIAL__STATE__||{};//eslint-disable-line
 // 封装DOM节点
 const root = document.getElementById('root');
